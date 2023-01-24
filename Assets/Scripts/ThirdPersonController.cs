@@ -78,7 +78,7 @@ namespace StarterAssets
         public float CamSensitivity = 4f;
 
         private bool _rotateOnMove = true;
-
+        
         // cinemachine
         private float _cinemachineTargetYaw;
         private float _cinemachineTargetPitch;
@@ -322,9 +322,10 @@ namespace StarterAssets
             float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, _targetRotation, ref _rotationVelocity,
                 RotationSmoothTime);
 
-            // rotate to face input direction relative to camera position
-            transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
-                
+            // // rotate to face input direction relative to camera position
+            // transform.rotation = Quaternion.Euler(0.0f, rotation, 0.0f);
+            //     
+            
             Vector3 targetDirection = Quaternion.Euler(0.0f, _targetRotation, 0.0f) * inputDirection;
 
             // move the player

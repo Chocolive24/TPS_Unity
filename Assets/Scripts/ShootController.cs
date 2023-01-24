@@ -1,10 +1,14 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using Cinemachine;
 using StarterAssets;
 using UnityEngine;
+using UnityEngine.Animations.Rigging;
 
 public class ShootController : MonoBehaviour
 {
+    [SerializeField] private Rig _aimRig;
     [SerializeField] private Transform _targetPoint;
     [SerializeField] private Transform _shootingOrigin;
     
@@ -20,9 +24,16 @@ public class ShootController : MonoBehaviour
     
     private StarterAssetsInputs _inputs;
     private Camera _mainCamera;
+    [SerializeField]private CinemachineVirtualCamera _aimCamera;
     
     [SerializeField] private float _cooldownTime;
 
+    [SerializeField] private GameObject _smokePrefab;
+    [SerializeField] private GameObject _shootExplosionPrefab;
+    
+    [SerializeField] private AudioSource _shootSound;
+
+    
     private float _nextFireTime;
 
     // Start is called before the first frame update
@@ -51,12 +62,16 @@ public class ShootController : MonoBehaviour
 
             if (_inputs.aim && _inputs.shoot)
             {
+                Instantiate(_shootExplosionPrefab, _shootingOrigin.position, Quaternion.identity);
+                
                 Target target = hit.collider.GetComponent<Target>();
             
                 if (target != null)
                 {
-                    target.DestroySelf();
+                    StartCoroutine(DestroyTime(target));
                 }
+                
+                Instantiate(_smokePrefab, hit.point, Quaternion.identity);
             }
         }
        
@@ -64,16 +79,14 @@ public class ShootController : MonoBehaviour
 
         if (_inputs.aim)
         {
+            _aimRig.weight = 1;
+            
             _shootingWeapon.SetActive(true);
             _runningWeapon.SetActive(false);
             
-            _shootingWeapon.transform.rotation = Quaternion.Euler(- _mainCamera.transform.eulerAngles.x, 
-                                                                  180 + _mainCamera.transform.eulerAngles.y, 
-                                                                  0f);
-
             _thirdPersonController.SetCamSensitivity(_aimSenitivity);
-            //_thirdPersonController.SetRotateOnMove(false);
-            _thirdPersonController.MoveSpeed = 1f;
+            
+            _thirdPersonController.MoveSpeed = 3f;
             _thirdPersonController.SprintSpeed = 3f;
             
             Vector3 worldAimTarget = targetPosition;
@@ -86,25 +99,51 @@ public class ShootController : MonoBehaviour
             {
                 Shoot();
                 _nextFireTime = Time.time + _cooldownTime;
+                
+                _aimCamera.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>().m_AmplitudeGain = 0.4f;
+                _aimCamera.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>().m_FrequencyGain = 0.4f;
+
+                _aimCamera.m_Lens.FieldOfView += 1f;
+            }
+            
+            else if (!_inputs.shoot)
+            {
+                _aimCamera.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>().m_AmplitudeGain = 0f;
+                _aimCamera.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>().m_FrequencyGain = 0f;
+
+                _aimCamera.m_Lens.FieldOfView = 15;
             }
         }
         else
         {
+            _aimRig.weight = 0;
+            
             _shootingWeapon.SetActive(false);
             _runningWeapon.SetActive(true);
             
             _thirdPersonController.SetCamSensitivity(_moveSensitivity);
             _thirdPersonController.SetRotateOnMove(true);
-             _thirdPersonController.MoveSpeed = 2f;
-             _thirdPersonController.SprintSpeed = 5.335f;
+            _thirdPersonController.MoveSpeed = 4f;
+            _thirdPersonController.SprintSpeed = 8.335f;
         }
         
     }
-
+    
     private void Shoot()
     {
         Instantiate(_projectile, _shootingOrigin.position,
                 Quaternion.LookRotation(_targetPoint.position - _shootingOrigin.position));
+        
+        _shootSound.Play();
+
+        _inputs.shoot = false;
     }
-   
+
+    private IEnumerator DestroyTime(Target target)
+    {
+        yield return new WaitForSeconds(0.01f);
+        
+        target.DestroySelf();
+    }
+    
 }
